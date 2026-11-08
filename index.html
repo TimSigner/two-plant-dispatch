@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two-plant dispatch</title>
+<style>
+/* Implements the Claude Design file LP-Dashboard.dc.html as one offline file: no network, no frameworks.
+   A fixed 1920 x 1080 stage is scaled to fit the window, so the projector shows the design exactly. */
+html, body { margin: 0; height: 100%; background: #E8EEF6; overflow: hidden; }
+* { box-sizing: border-box; }
+button, input { font: inherit; }
+.math { font-family: 'Cambria Math', Cambria, 'Times New Roman', serif; }
+#fit { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #E8EEF6; }
+#stage {
+  position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0;
+  display: grid; grid-template-rows: 76px 156px minmax(0, 1fr);
+  font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #0F172A; font-size: 20px; line-height: 1.35;
+}
+header { display: flex; align-items: center; gap: 24px; padding: 0 32px; background: #0B2A5B; color: #FFFFFF; }
+header .titles { display: grid; line-height: 1.2; }
+header strong { font-size: 26px; font-weight: 700; }
+header span.sub { font-size: 18px; color: #C9D6EA; }
+header .spacer { flex: 1; }
+#reset { font-size: 19px; font-weight: 600; padding: 10px 20px; border-radius: 8px; border: 2px solid #FFFFFF; background: transparent; color: #FFFFFF; cursor: pointer; }
+#reset:hover { background: #FFFFFF; color: #0B2A5B; }
+.scene-wrap { padding: 16px 24px 0; }
+.scene-box { height: 140px; border-radius: 12px; overflow: hidden; border: 1px solid #CBD5E1; background: #EEF6FC; }
+.scene-box svg { display: block; width: 100%; height: 100%; }
+.main { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 16px; padding: 16px 24px 24px; min-height: 0; }
+.params { display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 16px; min-height: 0; }
+.card { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 12px; padding: 12px 22px; display: grid; gap: 10px; align-content: center; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.card h2 { margin: 0; font-size: 22px; color: #0B2A5B; }
+.card-head .ef { font-size: 18px; color: #334155; }
+.card-head .ef strong { color: #0F172A; }
+.ctl { display: grid; }
+.ctl .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; white-space: nowrap; }
+.ctl label { font-weight: 600; }
+.ctl output { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.capbox { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 600; cursor: pointer; }
+.capbox input { width: 24px; height: 24px; margin: 0; accent-color: #0B2A5B; cursor: pointer; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 40px; margin: 0; background: transparent; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: #BCC9DB; }
+input[type=range]::-moz-range-track { height: 8px; border-radius: 4px; background: #BCC9DB; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; margin-top: -12px; border-radius: 50%; background: #0B2A5B; border: 4px solid #FFFFFF; box-shadow: 0 0 0 2px #0B2A5B, 0 2px 6px rgba(11, 42, 91, .35); }
+input[type=range]::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%; background: #0B2A5B; border: 4px solid #FFFFFF; box-shadow: 0 0 0 2px #0B2A5B; }
+input[type=range]:disabled { opacity: .35; cursor: default; }
+input:focus-visible, button:focus-visible, svg:focus-visible { outline: 3px solid #E08600; outline-offset: 3px; }
+.board { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 12px; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) 456px; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; }
+#graph { position: relative; min-height: 0; min-width: 0; }
+#graph svg { display: block; position: absolute; inset: 0; touch-action: none; user-select: none; cursor: crosshair; font-family: inherit; }
+.model { border-left: 1px solid #E2E8F0; padding: 24px 18px; display: grid; align-content: center; gap: 14px; min-width: 0; }
+.objval { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 12px 18px; margin-bottom: 18px; border-radius: 10px; background: #FFF4E2; border: 2px solid #E08600; }
+.objval span { font-size: 20px; font-weight: 600; color: #4A2400; }
+.objval output { font-size: 30px; font-weight: 800; color: #9A4A00; font-variant-numeric: tabular-nums; }
+.model h2 { margin: 0; font-size: 22px; color: #0B2A5B; }
+.model p { margin: 0; font-size: 18px; color: #475569; }
+.lp { display: grid; grid-template-columns: 16px 30px max-content 18px max-content minmax(0, 1fr); align-items: center; column-gap: 7px; row-gap: 18px; font-variant-numeric: tabular-nums; }
+.lp .sw { height: 2px; background: #334155; }
+.lp .sw.obj { height: 7px; border-radius: 4px; background: #E08600; }
+.lp .kw { font-weight: 700; color: #0B2A5B; font-size: 19px; }
+.lp .ex { font-family: 'Cambria Math', Cambria, 'Times New Roman', serif; font-size: 25px; white-space: nowrap; }
+.lp .lhs { text-align: right; }
+.lp .rel { text-align: center; }
+.lp .nm { font-size: 18px; color: #475569; white-space: nowrap; }
+.lp .rule { grid-column: 1 / -1; border-top: 1px solid #E2E8F0; }
+.lp .off { opacity: .45; }
+.lp .struck { text-decoration: line-through; text-decoration-thickness: 2px; }
+.legend { grid-column: 1 / -1; border-top: 1px solid #E2E8F0; background: #F7F9FC; padding: 12px 26px 14px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; font-size: 18px; color: #1E293B; }
+.legend > span { display: flex; align-items: center; gap: 10px; }
+@keyframes rise { 0% { transform: translate(0, 0) scale(0.55); opacity: 0.9; } 100% { transform: translate(-26px, -44px) scale(1.9); opacity: 0; } }
+@keyframes flow { to { stroke-dashoffset: -18; } }
+@media (prefers-reduced-motion: reduce) { svg * { animation: none !important; } }
+</style>
+</head>
+<body>
+<div id="fit">
+<div id="stage">
+  <header>
+    <div class="titles">
+      <strong>Two-plant dispatch: cheapest way to meet demand</strong>
+      <span class="sub">Optimisation in Energy Systems · Session 1</span>
+    </div>
+    <span class="spacer"></span>
+    <button type="button" id="reset">Reset to lecture defaults</button>
+  </header>
+
+  <div class="scene-wrap" aria-label="Illustration of the plan shown">
+    <div class="scene-box" id="scene"></div>
+  </div>
+
+  <div class="main">
+    <div class="params" aria-label="Parameters">
+      <section class="card">
+        <div class="card-head"><h2>Coal plant</h2><span class="ef">Emission factor <strong id="ef-C"></strong></span></div>
+        <div class="ctl"><div class="row"><label for="PmaxC">Capacity</label><output id="out-PmaxC"></output></div><input id="PmaxC" type="range" min="0" max="800" step="10"></div>
+        <div class="ctl"><div class="row"><label for="cC">Cost</label><output id="out-cC"></output></div><input id="cC" type="range" min="5" max="120" step="5"></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Gas plant</h2><span class="ef">Emission factor <strong id="ef-G"></strong></span></div>
+        <div class="ctl"><div class="row"><label for="PmaxG">Capacity</label><output id="out-PmaxG"></output></div><input id="PmaxG" type="range" min="0" max="800" step="10"></div>
+        <div class="ctl"><div class="row"><label for="cG">Cost</label><output id="out-cG"></output></div><input id="cG" type="range" min="5" max="120" step="5"></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>System</h2><label class="capbox"><input type="checkbox" id="capOn">Apply the cap</label></div>
+        <div class="ctl"><div class="row"><label for="D">Demand</label><output id="out-D"></output></div><input id="D" type="range" min="0" max="1200" step="10"></div>
+        <div class="ctl"><div class="row"><label for="E">Emissions cap</label><output id="out-E"></output></div><input id="E" type="range" min="300" max="900" step="10"></div>
+      </section>
+    </div>
+
+    <section class="board">
+      <div id="graph" aria-label="Decision space"></div>
+      <div class="model" aria-label="The model">
+        <div class="objval"><span>Objective function value</span><output id="objval"></output></div>
+        <h2>The model</h2>
+        <p>Choose coal output <i class="math">x</i><sub>C</sub> and gas output <i class="math">x</i><sub>G</sub>, in MW.</p>
+        <div class="lp">
+          <span class="sw obj"></span><span class="kw">min</span>
+          <span class="ex"><span id="m-cC"></span> <i>x</i><sub>C</sub> + <span id="m-cG"></span> <i>x</i><sub>G</sub></span><span></span><span></span><span class="nm">total cost</span>
+          <span class="rule"></span>
+          <span class="sw"></span><span class="kw">s.t.</span><span class="ex lhs"><i>x</i><sub>C</sub> + <i>x</i><sub>G</sub></span><span class="ex rel">≥</span><span class="ex" id="m-D"></span><span class="nm">demand</span>
+          <span class="sw"></span><span></span><span class="ex lhs"><i>x</i><sub>C</sub></span><span class="ex rel">≤</span><span class="ex" id="m-PmaxC"></span><span class="nm">coal capacity</span>
+          <span class="sw"></span><span></span><span class="ex lhs"><i>x</i><sub>G</sub></span><span class="ex rel">≤</span><span class="ex" id="m-PmaxG"></span><span class="nm">gas capacity</span>
+          <span class="sw cap"></span><span></span><span class="ex lhs cap"><span id="m-eC"></span> <i>x</i><sub>C</sub> + <span id="m-eG"></span> <i>x</i><sub>G</sub></span><span class="ex rel cap">≤</span><span class="ex cap" id="m-E"></span><span class="nm cap">emissions cap</span>
+          <span class="sw"></span><span></span><span class="ex lhs"><i>x</i><sub>C</sub>, <i>x</i><sub>G</sub></span><span class="ex rel">≥</span><span class="ex">0</span><span class="nm">non-negativity</span>
+        </div>
+        <p>Costs in £/MWh, emissions in t. Demand, capacities and non-negativity always apply.</p>
+      </div>
+      <div class="legend" aria-label="Legend">
+        <span><svg width="48" height="22"><line x1="4" y1="11" x2="44" y2="11" stroke="#E08600" stroke-width="7" stroke-linecap="round"/></svg>Cost line: same total cost</span>
+        <span><svg width="48" height="22"><line x1="4" y1="11" x2="44" y2="11" stroke="#E08600" stroke-width="7" stroke-linecap="round"/><line x1="4" y1="11" x2="44" y2="11" stroke="#0F172A" stroke-width="3" stroke-dasharray="9 6"/></svg>Feasible plans on the cost line</span>
+        <span><svg width="48" height="22"><line x1="4" y1="11" x2="44" y2="11" stroke="#334155" stroke-width="2.5"/></svg>Constraint</span>
+        <span><svg width="40" height="22"><rect x="2" y="2" width="36" height="18" rx="3" fill="#B9CFEE"/></svg>Feasible region</span>
+        <span><svg width="16" height="22"><circle cx="8" cy="11" r="5" fill="#334155"/></svg>Corner</span>
+        <span><svg width="32" height="32"><circle cx="16" cy="16" r="12" fill="#E08600" stroke="#FFFFFF" stroke-width="3"/><circle cx="16" cy="16" r="13.5" fill="none" stroke="#8A4200" stroke-width="1.5"/></svg>Optimum</span>
+      </div>
+    </section>
+  </div>
+</div>
+</div>
+
+<script id="solver">
+/* Solver for the two-plant dispatch model. Pure functions, no DOM:
+   the page uses it, and test_dashboard.py runs exactly this block with Node. */
+const Solver = (() => {
+  "use strict";
+
+  const DEFAULTS = Object.freeze({
+    cC: 35, cG: 70, D: 800, PmaxC: 600, PmaxG: 500, eC: 0.76, eG: 0.37, E: 600, PminG: 250,
+    nonneg: true, capacities: true, demand: true, demandMode: ">=", emissions: true, msg: false
+  });
+  // eC, eG: direct CO2 in t/MWh, IPCC AR5 WGIII Annex III, Table A.III.2 (medians: coal PC 760, gas combined cycle 370 gCO2eq/kWh).
+  const WALK_START = Object.freeze([1600 / 3, 500]);
+
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1];
+  const norm = a => Math.hypot(a[0], a[1]);
+  const ok = r => r.status === "OPTIMAL" || r.status === "MULTIPLE";
+
+  // Numbers for text: thousands separators, at most one decimal, a real minus sign.
+  function fmt(v) {
+    const r = Math.round(v * 10) / 10;
+    const s = Math.abs(r - Math.round(r)) < 1e-9 ? String(Math.abs(Math.round(r))) : Math.abs(r).toFixed(1);
+    const [i, d] = s.split(".");
+    return (r < 0 ? "−" : "") + i.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (d ? "." + d : "");
+  }
+
+  // A constraint in natural form (coef · x  sense  rhs), stored also as a·x <= b (or a·x = b).
+  function mk(id, kind, name, coef, sense, rhs) {
+    const ge = sense === ">=";
+    return { id, kind, name, coef, sense, rhs, a: ge ? [-coef[0], -coef[1]] : coef.slice(), b: ge ? -rhs : rhs, eq: sense === "=" };
+  }
+  function constraints(p) {
+    const list = [];
+    if (p.nonneg) {
+      list.push(mk("nnC", "nonneg", "Coal output ≥ 0", [1, 0], ">=", 0));
+      list.push(mk("nnG", "nonneg", "Gas output ≥ 0", [0, 1], ">=", 0));
+    }
+    if (p.capacities) {
+      list.push(mk("capC", "capacity", "Coal capacity", [1, 0], "<=", p.PmaxC));
+      list.push(mk("capG", "capacity", "Gas capacity", [0, 1], "<=", p.PmaxG));
+    }
+    if (p.demand) list.push(mk("dem", "demand", "Demand", [1, 1], p.demandMode === "=" ? "=" : ">=", p.D));
+    if (p.emissions) list.push(mk("emis", "emissions", "Emissions cap", [p.eC, p.eG], "<=", p.E));
+    return list;
+  }
+  // On/off rows: u_G = 0 forces x_G = 0; u_G = 1 forces Pmin_G <= x_G <= Pmax_G.
+  function msgRows(p, u) {
+    if (u === 0) return [mk("gasOff", "msg", "Gas off (u_G = 0)", [0, 1], "=", 0)];
+    const rows = [mk("msgMin", "msg", "Minimum stable generation", [0, 1], ">=", p.PminG)];
+    if (!p.capacities) rows.push(mk("msgMax", "msg", "Gas capacity (u_G = 1)", [0, 1], "<=", p.PmaxG));
+    return rows;
+  }
+
+  const tolFor = (k, x) => 1e-7 * (1 + Math.abs(k.b) + norm(k.a) * norm(x));
+  const gap = (k, x) => dot(k.a, x) - k.b;
+  const holds = (k, x) => (k.eq ? Math.abs(gap(k, x)) : gap(k, x)) <= tolFor(k, x);
+  const feasibleAt = (cons, x) => cons.every(k => holds(k, x));
+
+  function intersect(k1, k2) {
+    const det = k1.a[0] * k2.a[1] - k1.a[1] * k2.a[0];
+    if (Math.abs(det) <= 1e-12 * norm(k1.a) * norm(k2.a)) return null;
+    return [(k1.b * k2.a[1] - k1.a[1] * k2.b) / det, (k1.a[0] * k2.b - k1.b * k2.a[0]) / det];
+  }
+  // Corners: intersect every pair of boundaries and keep the feasible points.
+  function corners(cons) {
+    const V = [];
+    for (let i = 0; i < cons.length; i++) for (let j = i + 1; j < cons.length; j++) {
+      const x = intersect(cons[i], cons[j]);
+      if (!x || !feasibleAt(cons, x)) continue;
+      const same = v => Math.abs(v.x[0] - x[0]) <= 1e-7 * (1 + Math.abs(x[0])) && Math.abs(v.x[1] - x[1]) <= 1e-7 * (1 + Math.abs(x[1]));
+      if (V.some(same)) continue;
+      V.push({ x, on: cons.filter(k => Math.abs(gap(k, x)) <= tolFor(k, x)).map(k => k.id) });
+    }
+    if (V.length > 2) { // order around the centre, so the corners form a polygon
+      const cx = V.reduce((s, v) => s + v.x[0], 0) / V.length, cy = V.reduce((s, v) => s + v.x[1], 0) / V.length;
+      V.sort((v, w) => Math.atan2(v.x[1] - cy, v.x[0] - cx) - Math.atan2(w.x[1] - cy, w.x[0] - cx));
+    }
+    return V;
+  }
+  // Feasible points when there are no corners (a strip, a half-plane, a line or the whole plane).
+  function edgePoints(cons) {
+    const cand = [[0, 0]];
+    for (const k of cons) { const n2 = dot(k.a, k.a); if (n2 > 0) cand.push([k.a[0] * k.b / n2, k.a[1] * k.b / n2]); }
+    return cand.filter(x => feasibleAt(cons, x));
+  }
+  // Directions d with a·d <= 0 for every row (= 0 for equalities): the region extends without limit along them.
+  function coneDirs(cons, c) {
+    const cand = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+    for (const k of cons) { const n = norm(k.a); if (n > 0) cand.push([-k.a[1] / n, k.a[0] / n], [k.a[1] / n, -k.a[0] / n]); }
+    const cn = norm(c);
+    if (cn > 0) cand.push([-c[0] / cn, -c[1] / cn]);
+    return cand.filter(d => cons.every(k => {
+      const v = dot(k.a, d), t = 1e-9 * (1 + norm(k.a));
+      return k.eq ? Math.abs(v) <= t : v <= t;
+    }));
+  }
+
+  function solveLP(p, extra = []) {
+    const cons = constraints(p).concat(extra), c = [p.cC, p.cG], cost = x => dot(c, x);
+    const V = corners(cons), out = { cons, c, corners: V };
+    const pts = V.length ? [V[0].x] : edgePoints(cons);
+    if (!pts.length) return { ...out, status: "INFEASIBLE" };
+    const dirs = coneDirs(cons, c), tc = 1e-9 * (1 + norm(c));
+    const down = dirs.filter(d => dot(c, d) < -tc).sort((d, e) => dot(c, d) - dot(c, e))[0];
+    if (down) return { ...out, status: "UNBOUNDED", ray: { from: pts[0], dir: down } };
+    if (norm(c) === 0) { // no cost at all: every feasible point is optimal, unless there is only one
+      const single = V.length === 1 && !coneDirs(cons, [0, 0]).length;
+      return single ? { ...out, status: "OPTIMAL", x: V[0].x, z: 0 } : { ...out, status: "MULTIPLE", all: true, x: pts[0], z: 0 };
+    }
+    if (!V.length) { // bounded cost on a region without corners: optimal along a whole line
+      const x = pts.reduce((a, b) => (cost(b) < cost(a) ? b : a));
+      return { ...out, status: "MULTIPLE", line: true, x, z: cost(x) };
+    }
+    const z = Math.min(...V.map(v => cost(v.x))), tz = 1e-9 * Math.max(1, Math.abs(z));
+    const best = V.filter(v => cost(v.x) <= z + tz);
+    if (best.length >= 2) { // a tie: the optimal set is the edge between the outermost optimal corners
+      let e = [best[0], best[1]], far = -1;
+      for (const v of best) for (const w of best) {
+        const d = Math.hypot(v.x[0] - w.x[0], v.x[1] - w.x[1]);
+        if (d > far) { far = d; e = [v, w]; }
+      }
+      e.sort((v, w) => v.x[0] - w.x[0] || w.x[1] - v.x[1]);
+      return { ...out, status: "MULTIPLE", z, x: e[0].x, edge: [e[0].x, e[1].x] };
+    }
+    const flat = dirs.find(d => Math.abs(dot(c, d)) <= tc);
+    if (flat) return { ...out, status: "MULTIPLE", z, x: best[0].x, ray: { from: best[0].x, dir: flat } };
+    return { ...out, status: "OPTIMAL", z, x: best[0].x };
+  }
+
+  // MILP for minimum stable generation: one LP per value of u_G, keep the cheaper.
+  function solveMILP(p) {
+    const lp = solveLP(p);
+    if (!p.msg) return { lp, best: lp, u: null };
+    const off = solveLP(p, msgRows(p, 0)), on = solveLP(p, msgRows(p, 1));
+    const opts = [{ u: 1, r: on }, { u: 0, r: off }];
+    const unb = opts.find(o => o.r.status === "UNBOUNDED");
+    if (unb) return { lp, off, on, best: unb.r, u: unb.u };
+    const good = opts.filter(o => ok(o.r)).sort((a, b) => a.r.z - b.r.z);
+    if (!good.length) return { lp, off, on, best: { ...on, status: "INFEASIBLE" }, u: null };
+    const tie = good.length === 2 && Math.abs(good[0].r.z - good[1].r.z) <= 1e-9 * Math.max(1, Math.abs(good[0].r.z));
+    return { lp, off, on, best: good[0].r, u: good[0].u, tieU: tie };
+  }
+
+  // Slack, binding and violation of every row at a point, in natural units.
+  function analyse(cons, x) {
+    return cons.map(k => {
+      const lhs = dot(k.coef, x), t = tolFor(k, x);
+      const slack = k.sense === "<=" ? k.rhs - lhs : k.sense === ">=" ? lhs - k.rhs : 0;
+      const off = k.eq ? Math.abs(lhs - k.rhs) : Math.max(0, -slack);
+      const violated = off > t;
+      return { id: k.id, kind: k.kind, name: k.name, sense: k.sense, rhs: k.rhs, lhs, slack, violated, by: violated ? off : 0, binding: !violated && (k.eq || Math.abs(slack) <= t) };
+    });
+  }
+  // Along an optimal edge: binding only if binding at both ends; slack as a range.
+  function analyseEdge(cons, x1, x2) {
+    const a = analyse(cons, x1), b = analyse(cons, x2);
+    return a.map((k, i) => ({ ...k, binding: k.binding && b[i].binding, slack: Math.min(k.slack, b[i].slack), slackMax: Math.max(k.slack, b[i].slack) }));
+  }
+  const emis = (p, x) => p.eC * x[0] + p.eG * x[1];
+
+  function feasibleSet(cons) { return corners(cons).length > 0 || edgePoints(cons).length > 0; }
+  // Smallest group of rows that cannot hold together (brute force: at most 7 rows).
+  function conflict(cons) {
+    for (let size = 1; size <= cons.length; size++) {
+      let found = null;
+      (function choose(start, pick) {
+        if (found) return;
+        if (pick.length === size) { if (!feasibleSet(pick.map(i => cons[i]))) found = pick.slice(); return; }
+        for (let i = start; i < cons.length; i++) { pick.push(i); choose(i + 1, pick); pick.pop(); }
+      })(0, []);
+      if (found) return found.map(i => cons[i]);
+    }
+    return cons;
+  }
+  // Plain words for an infeasible model.
+  function explain(p, extra = []) {
+    const cap = p.PmaxC + p.PmaxG;
+    if (p.demand && p.capacities && p.D > cap + 1e-9) return `Demand (${fmt(p.D)} MW) exceeds total capacity (${fmt(cap)} MW).`;
+    if (p.demand && p.emissions) {
+      const r = solveLP({ ...p, emissions: false, cC: p.eC, cG: p.eG }, extra);
+      if (ok(r) && r.z > p.E + 1e-9) return `The least-emitting plan that meets demand emits ${fmt(r.z)} t, more than the cap of ${fmt(p.E)} t.`;
+    }
+    const k = conflict(constraints(p).concat(extra));
+    return `These constraints cannot all hold at once: ${k.map(c => c.name.toLowerCase()).join(", ")}.`;
+  }
+
+  function regionType(r) {
+    if (r.status === "INFEASIBLE") return "empty";
+    if (coneDirs(r.cons, [0, 0]).length) return "unbounded";
+    return r.corners.length >= 3 ? "polygon" : r.corners.length === 2 ? "segment" : "point";
+  }
+
+  // Everything the results strip and the tests need, as plain data.
+  function report(input) {
+    const p = { ...DEFAULTS, ...input };
+    const m = solveMILP(p), r = m.best;
+    const out = { status: r.status, u: m.u, tieU: !!m.tieU, region: { type: regionType(r), corners: r.corners.map(v => v.x) } };
+    if (r.status === "INFEASIBLE") {
+      out.reasons = p.msg
+        ? [`Gas on (u_G = 1): ${explain(p, msgRows(p, 1))}`, `Gas off (u_G = 0): ${explain(p, msgRows(p, 0))}`]
+        : [explain(p)];
+    }
+    if (r.status === "UNBOUNDED") out.ray = r.ray;
+    if (ok(r)) {
+      Object.assign(out, { x: r.x, z: r.z, edge: r.edge || null, optRay: r.ray || null, all: !!r.all, line: !!r.line, emissions: emis(p, r.x) });
+      out.checks = r.edge ? analyseEdge(r.cons, r.edge[0], r.edge[1]) : analyse(r.cons, r.x);
+      out.binding = out.checks.filter(k => k.binding).map(k => k.id);
+      if (r.edge) out.emissionsRange = [emis(p, r.edge[0]), emis(p, r.edge[1])];
+    }
+    if (p.msg) {
+      out.lp = { status: m.lp.status, x: m.lp.x || null, z: ok(m.lp) ? m.lp.z : null };
+      out.delta = ok(r) && ok(m.lp) ? r.z - m.lp.z : null;
+      out.pieces = { on: m.on.status, off: m.off.status };
+    }
+    return out;
+  }
+
+  // Corner-to-corner walk: move to the cheapest cheaper neighbour (one shared binding row);
+  // ties go to the larger x_C. Stops when no neighbour is cheaper.
+  function walk(input, start = WALK_START) {
+    const p = { ...DEFAULTS, ...input, msg: false };
+    const r = solveLP(p), V = r.corners, cost = v => dot(r.c, v.x);
+    if (!V.length) return [];
+    let i = 0, best = Infinity;
+    V.forEach((v, j) => { const d = Math.hypot(v.x[0] - start[0], v.x[1] - start[1]); if (d < best) { best = d; i = j; } });
+    const path = [i];
+    for (let guard = 0; guard < V.length; guard++) {
+      const cur = V[i], zc = cost(cur), tz = 1e-9 * Math.max(1, Math.abs(zc));
+      const nb = V.map((_, j) => j).filter(j => j !== i && V[j].on.some(id => cur.on.includes(id)) && cost(V[j]) < zc - tz);
+      if (!nb.length) break;
+      nb.sort((a, b) => { const d = cost(V[a]) - cost(V[b]); return Math.abs(d) > tz ? d : V[b].x[0] - V[a].x[0]; });
+      i = nb[0];
+      path.push(i);
+    }
+    return path.map(j => ({ x: V[j].x, z: cost(V[j]), on: V[j].on }));
+  }
+
+  // A clicked point: cost and which rows it breaks. With on/off active, u_G follows x_G.
+  function evaluate(input, x) {
+    const p = { ...DEFAULTS, ...input };
+    const extra = p.msg ? msgRows(p, Math.abs(x[1]) > 1e-9 ? 1 : 0) : [];
+    return { x, z: p.cC * x[0] + p.cG * x[1], emissions: emis(p, x), checks: analyse(constraints(p).concat(extra), x) };
+  }
+
+  return { DEFAULTS, WALK_START, fmt, constraints, msgRows, solveLP, solveMILP, report, walk, evaluate };
+})();
+if (typeof module === "object" && module.exports) module.exports = Solver;
+</script>
+
+<script id="app">
+/* Page logic, ported from the design's component (LP-Dashboard.dc.html) to plain JavaScript.
+   Feasible region, optimum and ties come from Solver above, the code that test_dashboard.py checks. */
+(() => {
+  "use strict";
+  const AX = 800, EC = Solver.DEFAULTS.eC, EG = Solver.DEFAULTS.eG, FS = 19;
+  const BASE = { PmaxC: 600, PmaxG: 500, cC: 35, cG: 70, D: 800, E: Solver.DEFAULTS.E, capOn: true, z: 60000, snapped: false, touched: false };
+  // The design's named states, used by make_screenshots.py.
+  const PRESETS = {
+    default: {},
+    dragging: { z: 42000, touched: true },
+    last: { snapped: true, touched: true },
+    capoff: { capOn: false, snapped: true, touched: true },
+    infeasible: { D: 1200, touched: true },
+    tie: { cC: 35, cG: 35, snapped: true, touched: true }
+  };
+  const BOX = [[-1, 0, 0], [1, 0, AX], [0, -1, 0], [0, 1, AX]];
+  const fmt = v => Math.round(v).toLocaleString("en-GB");
+  const gbp = v => "£" + fmt(v);
+  const $ = id => document.getElementById(id);
+  const NS = "http://www.w3.org/2000/svg";
+  let s = { ...BASE }, mem = {}, drag = false, geo = null;
+
+  /* ---------- Geometry helpers ---------- */
+  // Segment of the line a·x + b·y = c inside the half-planes [ha, hb, hc] (ha·x + hb·y <= hc).
+  function clipLine(a, b, c, hps) {
+    const n2 = a * a + b * b;
+    if (!n2) return null;
+    const p = [(a * c) / n2, (b * c) / n2], d = [-b, a];
+    let t0 = -1e12, t1 = 1e12;
+    for (const [ha, hb, hc] of hps) {
+      const num = hc - (ha * p[0] + hb * p[1]), den = ha * d[0] + hb * d[1];
+      if (Math.abs(den) < 1e-12) { if (num < -1e-6) return null; continue; }
+      const t = num / den;
+      if (den > 0) t1 = Math.min(t1, t); else t0 = Math.max(t0, t);
+    }
+    if (t0 > t1 + 1e-9) return null;
+    return [[p[0] + t0 * d[0], p[1] + t0 * d[1]], [p[0] + t1 * d[0], p[1] + t1 * d[1]]];
+  }
+  function segDist(q, sg) {
+    if (!sg) return Infinity;
+    const [P, Q] = sg, dx = Q[0] - P[0], dy = Q[1] - P[1], L2 = dx * dx + dy * dy;
+    const t = L2 ? Math.max(0, Math.min(1, ((q[0] - P[0]) * dx + (q[1] - P[1]) * dy) / L2)) : 0;
+    return Math.hypot(q[0] - P[0] - t * dx, q[1] - P[1] - t * dy);
+  }
+
+  /* ---------- The model ---------- */
+  function model(st) {
+    const p = { ...Solver.DEFAULTS, cC: st.cC, cG: st.cG, D: st.D, PmaxC: st.PmaxC, PmaxG: st.PmaxG, eC: EC, eG: EG, E: st.E, emissions: st.capOn };
+    const r = Solver.solveLP(p);
+    const hps = [[-1, 0, 0], [0, -1, 0], [1, 0, st.PmaxC], [0, 1, st.PmaxG], [-1, -1, -st.D]];
+    if (st.capOn) hps.push([EC, EG, st.E]);
+    const feasible = r.status !== "INFEASIBLE", poly = r.corners.map(v => v.x);
+    const cost = q => st.cC * q[0] + st.cG * q[1];
+    const zmin = feasible ? r.z : null, zmaxR = feasible ? Math.max(...poly.map(cost)) : null;
+    const opt = !feasible ? [] : r.edge ? r.edge : [r.x];
+    const zMax = Math.ceil((AX * (st.cC + st.cG)) / 1000) * 1000;
+    const z = st.snapped && feasible ? zmin : Math.min(st.z, zMax);
+    const atMin = feasible && Math.abs(z - zmin) < 0.5;
+    const tie = atMin && r.status === "MULTIPLE";
+    return { hps, poly, feasible, zmin, zmaxR, opt, zMax, z, atMin, tie };
+  }
+  function patch(k, v) {
+    const n = { ...s, [k]: v };
+    if (!s.snapped) n.z = Math.min(n.z, model(n).zMax);
+    s = n;
+    render();
+  }
+  // Move the cost line; it snaps to the last contact with the feasible region.
+  function setZ(z, near) {
+    const M = model(s);
+    let snapped = false;
+    if (M.feasible && (near ? near() : Math.abs(z - M.zmin) <= M.zMax * 0.012)) { z = M.zmin; snapped = true; }
+    s = { ...s, z: Math.max(0, Math.min(M.zMax, z)), snapped, touched: true };
+    render();
+  }
+
+  /* ---------- Labels along the lines ---------- */
+  function placeLabels(items, g, avoidPts, avoidSegs) {
+    const placed = [], out = [];
+    const inPlot = p => p[0] > g.ml + 4 && p[0] < g.ml + g.pw - 4 && p[1] > g.mt + 4 && p[1] < g.mt + g.ph - 4;
+    for (const it of items) {
+      const [P, Q] = it.seg, dx = Q[0] - P[0], dy = Q[1] - P[1], L = Math.hypot(dx, dy);
+      if (L < 1) continue;
+      let ux = dx / L, uy = dy / L;
+      if (ux < -1e-9 || (Math.abs(ux) < 1e-9 && uy > 0)) { ux = -ux; uy = -uy; }
+      const nx = uy, ny = -ux, w = it.text.length * it.fs * 0.56, r = it.fs * 0.62;
+      const k = Math.max(2, Math.ceil(w / (it.fs * 0.8)));
+      const cand = (t, side) => {
+        const off = side * (it.fs * 0.5 + 9), cx = P[0] + t * dx + nx * off, cy = P[1] + t * dy + ny * off, pts = [];
+        for (let i = 0; i < k; i++) { const f = -w / 2 + (w * i) / (k - 1); pts.push([cx + ux * f, cy + uy * f]); }
+        let sc = 0;
+        for (const p of pts) {
+          if (!inPlot(p)) sc += 2000;
+          for (const o of placed) if (Math.hypot(p[0] - o[0], p[1] - o[1]) < 2 * r) sc += 1000;
+          for (const a of avoidPts) if (Math.hypot(p[0] - a[0], p[1] - a[1]) < r + a[2]) sc += 600;
+          for (const sg of avoidSegs) if (sg.s !== it.seg && segDist(p, sg.s) < r + sg.pad) sc += sg.w;
+        }
+        return { t, side, cx, cy, pts, sc, deg: (Math.atan2(uy, ux) * 180) / Math.PI };
+      };
+      const prev = mem[it.id];
+      let best = prev ? cand(prev.t, prev.side) : null;
+      if (!best || best.sc > 0) { // keep a label where it was unless it now collides
+        best = null;
+        for (let t = 0.06; t <= 0.945; t += 0.02) for (const side of it.sides) {
+          const c = cand(t, side);
+          c.sc += Math.abs(t - (prev ? prev.t : it.pref)) * 30;
+          if (!best || c.sc < best.sc) best = c;
+        }
+      }
+      mem[it.id] = { t: best.t, side: best.side };
+      placed.push(...best.pts);
+      out.push({ id: it.id, text: it.text, fs: it.fs, ink: it.ink, weight: it.weight, cx: best.cx, cy: best.cy, deg: best.deg });
+    }
+    return out;
+  }
+
+  /* ---------- The graph ---------- */
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("role", "img");
+  svg.setAttribute("tabindex", "0");
+  svg.setAttribute("aria-label", "Decision space: coal output against gas output. Drag the cost line, or use the arrow keys.");
+  $("graph").appendChild(svg);
+
+  function renderGraph(M) {
+    const box = $("graph"), W = Math.max(300, box.clientWidth), H = Math.max(240, box.clientHeight);
+    const ml = 96, mr = 30, mt = 26, mb = 78, pw = W - ml - mr, ph = H - mt - mb;
+    const X = x => ml + (x / AX) * pw, Y = y => mt + ph - (y / AX) * ph, P = p => [X(p[0]), Y(p[1])];
+    const segPx = sg => (sg ? [P(sg[0]), P(sg[1])] : null);
+    const cons = [
+      { id: "dem", text: "demand", l: [1, 1, s.D], pref: 0.5 },
+      { id: "capC", text: "coal capacity", l: [1, 0, s.PmaxC], pref: 0.85 },
+      { id: "capG", text: "gas capacity", l: [0, 1, s.PmaxG], pref: 0.15 }
+    ];
+    if (s.capOn) cons.push({ id: "emis", text: "emissions cap", l: [EC, EG, s.E], pref: 0.7 });
+    cons.forEach(c => { c.seg = segPx(clipLine(c.l[0], c.l[1], c.l[2], BOX)); });
+    const objPx = segPx(clipLine(s.cC, s.cG, M.z, BOX));
+    const optPx = M.feasible ? segPx(clipLine(s.cC, s.cG, M.zmin, BOX)) : null;
+    const chord = M.feasible && M.z >= M.zmin - 0.5 && M.z <= M.zmaxR + 0.5 ? segPx(clipLine(s.cC, s.cG, M.z, M.hps)) : null;
+    const optDot = M.atMin && !M.tie ? P(M.opt[0]) : null;
+    geo = { ml, mt, pw, ph, objPx, optPx };
+
+    const avoidPts = [];
+    if (optDot) avoidPts.push([optDot[0], optDot[1], 20]);
+    M.poly.forEach(p => { const q = P(p); avoidPts.push([q[0], q[1], 8]); });
+    const segs = [];
+    if (objPx) segs.push({ s: objPx, pad: 10, w: 600 });
+    cons.forEach(c => c.seg && segs.push({ s: c.seg, pad: 2, w: 60 }));
+    const items = [];
+    if (!s.touched && objPx) items.push({ id: "drag", text: "drag me", seg: objPx, fs: 21, pref: 0.5, sides: [1], ink: "#8A4200", weight: 800 });
+    cons.forEach(c => c.seg && items.push({ id: c.id, text: c.text, seg: c.seg, fs: FS, pref: c.pref, sides: [1, -1], ink: "#1E293B", weight: 600 }));
+    const labels = placeLabels(items, geo, avoidPts, segs);
+
+    const f = v => v.toFixed(1);
+    const line = (sg, style) => `<line x1="${f(sg[0][0])}" y1="${f(sg[0][1])}" x2="${f(sg[1][0])}" y2="${f(sg[1][1])}" ${style}/>`;
+    let o = `<rect x="${ml}" y="${mt}" width="${f(pw)}" height="${f(ph)}" fill="#FFFFFF"/>`;
+    for (let v = 0; v <= AX; v += 100) {
+      const col = v ? "#E3E9F1" : "#94A3B8", wd = v ? 1 : 1.5;
+      o += `<line x1="${f(X(v))}" x2="${f(X(v))}" y1="${mt}" y2="${f(mt + ph)}" stroke="${col}" stroke-width="${wd}"/>`;
+      o += `<line x1="${ml}" x2="${f(ml + pw)}" y1="${f(Y(v))}" y2="${f(Y(v))}" stroke="${col}" stroke-width="${wd}"/>`;
+      o += `<text x="${f(X(v))}" y="${f(mt + ph + 26)}" font-size="17" fill="#334155" text-anchor="middle">${v}</text>`;
+      o += `<text x="${ml - 12}" y="${f(Y(v))}" font-size="17" fill="#334155" text-anchor="end" dominant-baseline="central">${v}</text>`;
+    }
+    const sub = (a, b) => `<tspan>${a}</tspan><tspan dy="6" font-size="14">${b}</tspan><tspan dy="-6"> [MW]</tspan>`;
+    o += `<text x="${f(ml + pw / 2)}" y="${H - 18}" font-size="19" font-weight="600" fill="#0B2A5B" text-anchor="middle">${sub("Coal output x", "C")}</text>`;
+    o += `<text x="26" y="${f(mt + ph / 2)}" transform="rotate(-90 26 ${f(mt + ph / 2)})" font-size="19" font-weight="600" fill="#0B2A5B" text-anchor="middle" dominant-baseline="central">${sub("Gas output x", "G")}</text>`;
+    if (M.poly.length >= 3) o += `<polygon points="${M.poly.map(p => P(p).map(f).join(",")).join(" ")}" fill="#B9CFEE"/>`;
+    cons.forEach(c => { if (c.seg) o += line(c.seg, 'stroke="#334155" stroke-width="2.5"'); });
+    M.poly.forEach(p => { const q = P(p); o += `<circle cx="${f(q[0])}" cy="${f(q[1])}" r="5" fill="#334155"/>`; });
+    if (objPx) o += line(objPx, 'stroke="#E08600" stroke-width="7" stroke-linecap="round"');
+    if (chord) o += line(chord, 'stroke="#0F172A" stroke-width="3" stroke-dasharray="12 9"');
+    if (optDot) {
+      o += `<circle cx="${f(optDot[0])}" cy="${f(optDot[1])}" r="13" fill="#E08600" stroke="#FFFFFF" stroke-width="3"/>`;
+      o += `<circle cx="${f(optDot[0])}" cy="${f(optDot[1])}" r="14.5" fill="none" stroke="#8A4200" stroke-width="1.5"/>`;
+    }
+    labels.forEach(l => {
+      o += `<text x="${f(l.cx)}" y="${f(l.cy)}" transform="rotate(${l.deg.toFixed(2)} ${f(l.cx)} ${f(l.cy)})" font-size="${l.fs}" font-weight="${l.weight}" fill="${l.ink}" text-anchor="middle" dominant-baseline="central" paint-order="stroke" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round" pointer-events="none">${l.text}</text>`;
+    });
+    svg.setAttribute("width", W);
+    svg.setAttribute("height", H);
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.innerHTML = o;
+  }
+
+  /* ---------- The illustrated power system ---------- */
+  function scenePlan(M) {
+    if (!M.feasible) return { x: null, title: "No feasible plan", ink: "#475569" };
+    if (M.atMin && !M.tie) return { x: M.opt[0], title: "Cheapest plan", ink: "#9A4A00" };
+    const ch = M.z >= M.zmin - 0.5 && M.z <= M.zmaxR + 0.5 ? clipLine(s.cC, s.cG, M.z, M.hps) : null;
+    if (ch) return { x: [Math.round((ch[0][0] + ch[1][0]) / 2), Math.round((ch[0][1] + ch[1][1]) / 2)], title: M.tie ? "One optimal plan" : "On the cost line", ink: M.tie ? "#9A4A00" : "#0B2A5B" };
+    return { x: null, title: "No plan yet", ink: "#475569" };
+  }
+  function renderScene(M) {
+    const plan = scenePlan(M), x = plan.x;
+    const xc = x ? x[0] : 0, xg = x ? x[1] : 0, em = EC * xc + EG * xg, served = xc + xg;
+    const COAL = "#475569", GAS = "#2F6DB5";
+    const T = (inner, tx, ty, o = {}) => `<text x="${tx}" y="${ty}" style="font-size:${o.size || 24}px;font-weight:${o.weight || 400};fill:${o.fill || "#0F172A"}">${inner}</text>`;
+    const xv = sb => `<tspan style="font-style:italic;font-family:Cambria,'Times New Roman',serif">x</tspan><tspan dy="5" style="font-size:16px">${sb}</tspan><tspan dy="-5"> </tspan>`;
+    const warn = (t, tx, ty) => T(t, tx, ty, { size: 20, fill: "#991B1B", weight: 700 });
+    const st = 'stroke="#8A96A3" stroke-width="1.3"';
+    const puffs = (px, py, a, col, n) => {
+      a = Math.max(0, Math.min(1, a));
+      if (a < 0.02) return "";
+      let o = `<g opacity="${(0.3 + 0.7 * a).toFixed(2)}">`;
+      for (let i = 0; i < n; i++) o += `<circle cx="${px}" cy="${py}" r="${(5 + 4 * a).toFixed(1)}" fill="${col}" stroke="#8A96A3" stroke-width="0.8" style="transform-box:fill-box;transform-origin:center;animation:rise 3.4s ease-out infinite;animation-delay:${((-i * 3.4) / n).toFixed(2)}s"/>`;
+      return o + "</g>";
+    };
+    const town = frac => {
+      const Hs = [[1400, 30, 40, 1], [1436, 28, 62, 0], [1470, 30, 36, 1], [1506, 26, 76, 0], [1538, 32, 44, 1], [1576, 28, 58, 0], [1610, 32, 38, 1], [1646, 26, 52, 0]];
+      let o = "";
+      const wins = [];
+      for (const [hx, w, hg, roof] of Hs) {
+        const y = 120 - hg;
+        o += `<rect x="${hx}" y="${y}" width="${w}" height="${hg}" fill="#F2EDE4" stroke="#8A96A3" stroke-width="1.2"/>`;
+        if (roof) o += `<polygon points="${hx - 3},${y} ${hx + w / 2},${y - 12} ${hx + w + 3},${y}" fill="#B65B45"/>`;
+        for (let r = 0; r < Math.max(1, Math.floor((hg - 10) / 14)); r++) for (let c = 0; c < 2; c++) wins.push([hx + 6 + c * (w - 18), y + 7 + r * 14]);
+      }
+      const order = wins.map((_, i) => i).sort((a, b) => ((a * 37) % 101) - ((b * 37) % 101));
+      const lit = new Set(order.slice(0, Math.round(wins.length * Math.max(0, Math.min(1, frac)))));
+      wins.forEach(([wx, wy], i) => { o += `<rect x="${wx.toFixed(1)}" y="${wy}" width="6" height="8" fill="${lit.has(i) ? "#F5C542" : "#A7B1BB"}"/>`; });
+      return o;
+    };
+    let o = '<defs><linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFDDF2"/><stop offset="1" stop-color="#EEF6FC"/></linearGradient></defs>';
+    o += '<rect width="1880" height="150" fill="url(#skyGrad)"/><circle cx="1560" cy="26" r="15" fill="#FCE7A6"/>';
+    o += '<path d="M0 104 C 260 84, 500 102, 780 92 S 1280 82, 1550 94 S 1790 88, 1880 92 V150 H0Z" fill="#D3E6C7"/>';
+    o += '<rect y="118" width="1880" height="32" fill="#BCD6AB"/><line x1="0" y1="118" x2="1880" y2="118" stroke="#9DBB8C" stroke-width="1.5"/>';
+    const flow = (y, x0, mw, col) => (mw > 0.5
+      ? `<path d="M${x0} ${y} H1400" fill="none" stroke="${col}" stroke-linecap="round" stroke-width="${(1.5 + mw / 160).toFixed(1)}" style="stroke-dasharray:9 9;animation:flow 1s linear infinite"/>`
+      : `<path d="M${x0} ${y} H1400" stroke="${col}" stroke-width="1.5" opacity="0.25" fill="none"/>`);
+    o += flow(126, 372, xc, COAL) + flow(137, 818, xg, GAS);
+    o += `<g opacity="${xc > 0.5 ? 1 : 0.55}"><path d="M260 120 C268 98 265 84 258 66 L302 66 C295 84 292 98 300 120Z" fill="#D5DBE1" ${st}/>`;
+    o += `<rect x="306" y="92" width="64" height="28" fill="#AEB8C2" ${st}/><rect x="340" y="38" width="10" height="82" fill="#C7CED6" ${st}/><rect x="340" y="46" width="10" height="5" fill="#C0392B" opacity="0.7"/></g>`;
+    o += puffs(345, 34, (EC * xc) / 500, "#9CA3AF", 4) + puffs(280, 62, (0.8 * xc) / Math.max(1, s.PmaxC), "#FFFFFF", 3);
+    o += `<g opacity="${xg > 0.5 ? 1 : 0.45}"><path d="M720 120 V98 Q720 88 730 88 H800 Q810 88 810 98 V120Z" fill="#D5DBE1" ${st}/><rect x="814" y="50" width="9" height="70" fill="#AEB8C2" ${st}/>`;
+    o += `<circle cx="745" cy="104" r="10" fill="#FFFFFF" stroke="${GAS}" stroke-width="2.5"/><path d="M745 112 C740 112 737 108 739 104 C740 101 742 99 743 96 C745 99 748 101 748 104 C749 102 749 100 748 99 C751 101 753 104 752 107 C751 110 748 112 745 112Z" fill="${GAS}"/></g>`;
+    o += puffs(818, 46, (EG * xg) / 300, "#D1D5DB", 3);
+    o += town(served / Math.max(1, s.D));
+    o += T("Shown", 24, 40, { size: 18, fill: "#475569", weight: 600 }) + T(plan.title, 24, 68, { size: 22, weight: 700, fill: plan.ink });
+    o += T("Coal plant", 392, 60, { weight: 700 }) + T(x ? `${xv("C")}= ${fmt(xc)} MW` : `${xv("C")}: no plan`, 392, 90);
+    if (x && xc > s.PmaxC) o += warn(`over by ${fmt(xc - s.PmaxC)} MW`, 392, 114);
+    o += T("Gas plant", 846, 60, { weight: 700 }) + T(x ? `${xv("G")}= ${fmt(xg)} MW` : `${xv("G")}: no plan`, 846, 90);
+    if (x && xg > s.PmaxG) o += warn(`over by ${fmt(xg - s.PmaxG)} MW`, 846, 114);
+    const gx = 1150, gw = 210;
+    o += T("Emissions", gx, 46, { weight: 700 });
+    o += `<rect x="${gx}" y="58" width="${gw}" height="14" rx="7" fill="#FFFFFF" stroke="#8A96A3" stroke-width="1.2"/>`;
+    if (x) {
+      const full = Math.max(s.capOn ? s.E : 0, em, 1) * 1.15, over = s.capOn && em > s.E + 1e-9;
+      o += `<rect x="${gx}" y="58" width="${((em / full) * gw).toFixed(1)}" height="14" rx="7" fill="${over ? "#991B1B" : "#0B2A5B"}"/>`;
+      if (s.capOn) { const cx = (gx + (s.E / full) * gw).toFixed(1); o += `<line x1="${cx}" y1="52" x2="${cx}" y2="78" stroke="#0F172A" stroke-width="2.5"/>`; }
+      o += T(s.capOn ? `${fmt(em)} t of ${fmt(s.E)} t cap` : `${fmt(em)} t, no cap`, gx, 100, { size: 22, fill: over ? "#991B1B" : "#0F172A", weight: over ? 700 : 400 });
+    }
+    o += T("Town", 1690, 60, { weight: 700 }) + T(`<tspan style="font-style:italic;font-family:Cambria,'Times New Roman',serif">D</tspan> = ${fmt(s.D)} MW`, 1690, 90);
+    if (x && served < s.D - 1e-6) o += warn(`short by ${fmt(s.D - served)} MW`, 1690, 114);
+    const label = x ? `${plan.title}: coal ${fmt(xc)} MW, gas ${fmt(xg)} MW, demand ${fmt(s.D)} MW, emissions ${fmt(em)} t` : plan.title;
+    $("scene").innerHTML = `<svg viewBox="0 0 1880 150" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${label}">${o}</svg>`;
+  }
+
+  /* ---------- Controls ---------- */
+  const SLIDERS = { PmaxC: v => fmt(v) + " MW", cC: v => "£" + v + "/MWh", PmaxG: v => fmt(v) + " MW", cG: v => "£" + v + "/MWh", D: v => fmt(v) + " MW", E: v => fmt(v) + " t" };
+  for (const k in SLIDERS) $(k).addEventListener("input", e => patch(k, Number(e.target.value)));
+  $("capOn").addEventListener("change", e => patch("capOn", e.target.checked));
+  $("reset").addEventListener("click", reset);
+  function sync(M) {
+    for (const k in SLIDERS) { $(k).value = s[k]; $("out-" + k).textContent = SLIDERS[k](s[k]); }
+    $("capOn").checked = s.capOn;
+    $("E").disabled = !s.capOn;
+    $("out-E").style.opacity = s.capOn ? 1 : 0.45;
+    $("m-cC").textContent = s.cC;
+    $("m-cG").textContent = s.cG;
+    $("m-D").textContent = fmt(s.D);
+    $("m-PmaxC").textContent = fmt(s.PmaxC);
+    $("m-PmaxG").textContent = fmt(s.PmaxG);
+    $("m-E").textContent = fmt(s.E);
+    $("ef-C").textContent = EC + " t/MWh";
+    $("ef-G").textContent = EG + " t/MWh";
+    $("m-eC").textContent = EC;
+    $("m-eG").textContent = EG;
+    document.querySelectorAll(".lp .cap").forEach(el => {
+      el.classList.toggle("off", !s.capOn);
+      if (el.classList.contains("ex")) el.classList.toggle("struck", !s.capOn);
+    });
+    $("objval").textContent = gbp(M.z);
+  }
+  function render() {
+    const M = model(s);
+    sync(M);
+    renderGraph(M);
+    renderScene(M);
+  }
+  function reset() { mem = {}; drag = false; s = { ...BASE }; render(); }
+
+  /* ---------- Pointer and keyboard: drag the cost line ---------- */
+  function toLocal(e) {
+    if (!geo) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const q = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return { q: [q.x, q.y], x: ((q.x - geo.ml) / geo.pw) * AX, y: ((geo.mt + geo.ph - q.y) / geo.ph) * AX };
+  }
+  svg.addEventListener("pointerdown", e => {
+    const L = toLocal(e);
+    if (!L) return;
+    if (segDist(L.q, geo.objPx) < 24) {
+      drag = true;
+      svg.setPointerCapture(e.pointerId);
+      s = { ...s, touched: true };
+      render();
+    }
+  });
+  svg.addEventListener("pointermove", e => {
+    const L = toLocal(e);
+    if (!L) return;
+    if (drag) { setZ(s.cC * L.x + s.cG * L.y, () => segDist(L.q, geo.optPx) < 18); return; }
+    svg.style.cursor = segDist(L.q, geo.objPx) < 24 ? "grab" : "crosshair";
+  });
+  const up = () => { drag = false; };
+  svg.addEventListener("pointerup", up);
+  svg.addEventListener("pointercancel", up);
+  // Keyboard and presenter clickers: arrows move the cost line, Home jumps to the last contact.
+  svg.addEventListener("keydown", e => {
+    const M = model(s), step = M.zMax / 100;
+    const away = s.snapped ? () => false : undefined; // leaving the last contact must not snap straight back
+    if (["ArrowLeft", "ArrowDown", "PageDown"].includes(e.key)) { e.preventDefault(); setZ(M.z - step, away); }
+    else if (["ArrowRight", "ArrowUp", "PageUp"].includes(e.key)) { e.preventDefault(); setZ(M.z + step, away); }
+    else if (e.key === "Home" && M.feasible) { e.preventDefault(); s = { ...s, snapped: true, touched: true }; render(); }
+  });
+
+  /* ---------- Fit the 1920 x 1080 stage to the window ---------- */
+  function fit() {
+    const sc = Math.min(window.innerWidth / 1920, window.innerHeight / 1080), st = $("stage");
+    st.style.transform = `scale(${sc})`;
+    st.style.left = (window.innerWidth - 1920 * sc) / 2 + "px";
+    st.style.top = (window.innerHeight - 1080 * sc) / 2 + "px";
+  }
+  window.addEventListener("resize", fit);
+
+  // Hooks for make_screenshots.py and for checks in the browser console.
+  window.dashboard = {
+    state: () => ({ ...s }),
+    preset(name) { mem = {}; drag = false; s = { ...BASE, ...(PRESETS[name] || {}) }; render(); },
+    set(values) { s = { ...s, ...values }; render(); },
+    reset
+  };
+  fit();
+  render();
+})();
+</script>
+</body>
+</html>
