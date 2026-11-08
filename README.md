@@ -12,5 +12,5 @@ output to meet demand at the lowest cost.
 - Works best on a laptop or a large screen. To use it offline, download `index.html` and open it in a
   browser: it is a single file and needs no internet.
 
-Emission factors: coal 0.76 and gas 0.37 t CO2/MWh, the median direct emissions in IPCC AR5,
-Working Group III, Annex III, Table A.III.2. All other numbers are illustrative teaching values.
+All numbers are illustrative teaching values, as on the lecture slides (emission factors 0.9 t CO2/MWh
+for coal and 0.4 for gas, cap 680 t).

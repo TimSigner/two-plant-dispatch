@@ -147,10 +147,10 @@ const Solver = (() => {
   "use strict";
 
   const DEFAULTS = Object.freeze({
-    cC: 35, cG: 70, D: 800, PmaxC: 600, PmaxG: 500, eC: 0.76, eG: 0.37, E: 600, PminG: 250,
+    cC: 35, cG: 70, D: 800, PmaxC: 600, PmaxG: 500, eC: 0.9, eG: 0.4, E: 680, PminG: 250,
     nonneg: true, capacities: true, demand: true, demandMode: ">=", emissions: true, msg: false
   });
-  // eC, eG: direct CO2 in t/MWh, IPCC AR5 WGIII Annex III, Table A.III.2 (medians: coal PC 760, gas combined cycle 370 gCO2eq/kWh).
+  // eC, eG in t CO2/MWh and the cap E: the illustrative values on the lecture slides (slide 7).
   const WALK_START = Object.freeze([1600 / 3, 500]);
 
   const dot = (a, b) => a[0] * b[0] + a[1] * b[1];
