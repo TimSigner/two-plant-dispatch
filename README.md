@@ -3,7 +3,7 @@
 Interactive linear programme for *Optimisation in Energy Systems*, Session 1: choose coal and gas
 output to meet demand at the lowest cost.
 
-**Open it:** https://signertim-design.github.io/two-plant-dispatch/
+**Open it:** https://timsigner.github.io/two-plant-dispatch/
 
 - Drag the orange cost line towards cheaper costs. At the last contact with the feasible region it snaps
   to the optimum. Arrow keys also move it once the graph is selected; Home jumps to the optimum.
